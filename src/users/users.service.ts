@@ -1,4 +1,6 @@
-import { Injectable, Param, ParseIntPipe } from '@nestjs/common';
+import { Injectable, NotFoundException, Param, ParseIntPipe } from '@nestjs/common';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -36,16 +38,28 @@ export class UsersService {
   ];
 
   findAll(role?: 'intern' | 'admin' | 'all') {
-    return role
-      ? this.users.filter((user) => user.role === role.toUpperCase())
-      : this.users;
+    if (role) {
+      const rolesArray = this.users.filter((user) => user.role === role.toUpperCase())
+
+      if (!rolesArray.length) {
+        throw new NotFoundException("User role not found")
+      }
+    }
+    return this.users
   }
 
   findOne(id: number) {
-    return this.users.find((user) => user.id === id);
+
+    const user = this.users.find((user) => user.id === id);
+
+    if (!user) {
+      throw new NotFoundException("User not found.")
+    }
+
+    return user
   }
 
-  create(user: { name: string, email: string, role: 'intern' | 'admin' | 'engineer' }) {
+  create(user: CreateUserDto) {
     const newUser = {
       id: this.users.length + 1,
       ...user,
@@ -54,16 +68,14 @@ export class UsersService {
     return newUser;
   }
 
-  update(@Param('id', ParseIntPipe) id: number, updatedUser: { name?: string, email?: string, role?: 'intern' | 'admin' | 'engineer' }) {
-    this.users = this.users.map((user) => {
+  update(id: number, updatedUser: UpdateUserDto) {
+    this.users = this.users.map(user => {
       if (user.id === id) {
-        return {
-          ...user,
-          ...updatedUser,
-        };
+        return { ...user, ...updatedUser };
       }
       return user;
     });
+    return this.findOne(id);
   }
 
   delete(id: number) {
